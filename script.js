@@ -31,10 +31,10 @@ function parseGrid(str) {
 
     // Find the minimum indentation to correctly handle indented template literals
     // (Though we'll try to keep strings clean)
-    
+
     const centerY = Math.floor(rows.length / 2);
     const centerX = Math.floor(rows[0].length / 2);
-    
+
     rows.forEach((row, y) => {
         // We use trim() here assuming the pattern is defined as a block of dots/Os
         // If the pattern relies on leading spaces instead of dots, this would be an issue.
@@ -166,6 +166,7 @@ OO.OOOOOO` },
         { name: "Clock", rle: `
 ..O.
 O.O.
+.O.O
 .O.O
 .O..` },
         { name: "Queen Bee Shuttle", rle: `
@@ -413,11 +414,11 @@ function selectCategory(category) {
 
     patternsGrid.innerHTML = '';
     const patternsList = patternCategories[category];
-    
+
     patternsList.forEach(pattern => {
         const card = document.createElement('div');
         card.className = 'pattern-card';
-        
+
         card.innerHTML = `
             <div class="preview-container">
                 <canvas class="preview-canvas"></canvas>
@@ -458,10 +459,10 @@ function renderPreview(canvas, points, offset = null) {
     const ctx = canvas.getContext('2d');
     const width = canvas.width = canvas.offsetWidth;
     const height = canvas.height = canvas.offsetHeight;
-    
+
     ctx.fillStyle = '#080808'; // Match CSS background
     ctx.fillRect(0, 0, width, height);
-    
+
     if (points.length === 0) return;
 
     // 1. Calculer la bounding box du pattern
@@ -505,7 +506,7 @@ function renderPreview(canvas, points, offset = null) {
         // Coordonnées écran
         const sx = drawOffsetX + (p.x + (offset ? offset.x : 0)) * pScale;
         const sy = drawOffsetY + (p.y + (offset ? offset.y : 0)) * pScale;
-        
+
         // Dessiner seulement si dans le canvas (avec petite marge)
         if (sx > -pScale && sx < width && sy > -pScale && sy < height) {
             ctx.fillRect(sx, sy, pScale - 1, pScale - 1);
@@ -529,17 +530,17 @@ function startPreviewAnimation(canvas, initialPoints) {
     // On définit une taille de monde virtuel basée sur la taille du canvas pour que ça boucle visuellement
     const visibleCols = Math.ceil(canvas.width / pScale);
     const visibleRows = Math.ceil(canvas.height / pScale);
-    
+
     // Add a small buffer so it goes fully off screen before wrapping
-    const buffer = 1; 
+    const buffer = 1;
     const worldWidth = visibleCols + buffer * 2;
     const worldHeight = visibleRows + buffer * 2;
-    
+
     const halfWidth = worldWidth / 2;
     const halfHeight = worldHeight / 2;
 
     let currentPoints = new Set(initialPoints.map(p => `${p.x},${p.y}`));
-    
+
     activePreviewInterval = setInterval(() => {
         const neighborCounts = new Map();
         const nextCells = new Set();
@@ -547,15 +548,15 @@ function startPreviewAnimation(canvas, initialPoints) {
         // Logique torique
         for (const key of currentPoints) {
             const [x, y] = key.split(',').map(Number);
-            
+
             // Voisins avec wrapping
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
                     if (dx === 0 && dy === 0) continue;
-                    
+
                     let nx = x + dx;
                     let ny = y + dy;
-                    
+
                     // Wrap logic
                     if (nx > halfWidth) nx -= worldWidth;
                     if (nx < -halfWidth) nx += worldWidth;
@@ -591,11 +592,11 @@ function startPreviewAnimation(canvas, initialPoints) {
             const [x, y] = key.split(',').map(Number);
             pointsArray.push({x, y});
         }
-        
+
         // Render avec le scale fixe calculé au début, centré sur 0,0
         // On réutilise la logique de renderPreview mais en forçant le mode "offset" (animation)
         // On passe offset {x:0, y:0} pour dire "dessine tel quel par rapport au centre"
-        
+
         // Hack: On réimplémente un render partiel ici pour forcer le scale
         const ctx = canvas.getContext('2d');
         const width = canvas.width;
@@ -720,12 +721,12 @@ function draw() {
 
     // 3. Dessiner les cellules vivantes
     ctx.fillStyle = '#ffffff';
-    
+
     // Optimisation: Ne dessiner que ce qui est visible
-    // On pourrait itérer sur toutes les cellules si le zoom est loin, 
+    // On pourrait itérer sur toutes les cellules si le zoom est loin,
     // mais pour un zoom proche, on vérifie les bornes.
     // Vu que c'est une Map sparse, itérer est souvent plus rapide que scanner l'écran sauf si la map est énorme.
-    
+
     const visibleMargin = 1; // Marge pour éviter le clipping
     const minX = -offsetX / scale - visibleMargin;
     const maxX = (canvas.width - offsetX) / scale + visibleMargin;
@@ -735,10 +736,10 @@ function draw() {
     ctx.beginPath();
     // Dessiner les cellules normales (non sélectionnées si en mouvement)
     const cellsToDraw = isMovingSelection ? liveCells : new Set([...liveCells, ...selectedCells]);
-    
+
     // Si on déplace la sélection, on ne dessine pas les cellules originales qui sont dans la sélection
     // (Elles sont "soulevées")
-    
+
     for (const cellKey of liveCells) {
         if (isMovingSelection && selectedCells.has(cellKey)) continue;
 
@@ -746,14 +747,14 @@ function draw() {
         const commaIndex = cellKey.indexOf(',');
         const gx = parseInt(cellKey.substring(0, commaIndex));
         const gy = parseInt(cellKey.substring(commaIndex + 1));
-        
+
         // Culling (ne dessiner que si visible)
         if (gx >= minX && gx <= maxX && gy >= minY && gy <= maxY) {
             const screenX = gx * scale + offsetX;
             const screenY = gy * scale + offsetY;
-            
+
             // Dessiner un carré légèrement plus petit que la grille pour l'esthétique
-            const size = Math.max(scale - 1, 1); 
+            const size = Math.max(scale - 1, 1);
             ctx.rect(screenX, screenY, size, size);
         }
     }
@@ -764,7 +765,7 @@ function draw() {
         // Dessiner la boîte de sélection
         let bx = selectionBox.x * scale + offsetX;
         let by = selectionBox.y * scale + offsetY;
-        
+
         // Ajouter le décalage visuel si on déplace
         if (isMovingSelection) {
             bx += selectionOffset.x;
@@ -777,7 +778,7 @@ function draw() {
         // Fond semi-transparent
         ctx.fillStyle = 'rgba(33, 150, 243, 0.2)';
         ctx.fillRect(bx, by, bw, bh);
-        
+
         // Bordure
         ctx.strokeStyle = '#2196F3';
         ctx.lineWidth = 2;
@@ -787,7 +788,7 @@ function draw() {
         if (isMovingSelection || selectedCells.size > 0) {
             ctx.fillStyle = '#90CAF9'; // Couleur légèrement différente pour la sélection
             ctx.beginPath();
-            
+
             // Calculer le décalage en grille
             const moveX = Math.round(selectionOffset.x / scale);
             const moveY = Math.round(selectionOffset.y / scale);
@@ -796,7 +797,7 @@ function draw() {
                 const commaIndex = cellKey.indexOf(',');
                 const gx = parseInt(cellKey.substring(0, commaIndex));
                 const gy = parseInt(cellKey.substring(commaIndex + 1));
-                
+
                 // Position finale = Position originale + Décalage
                 const finalX = gx + (isMovingSelection ? moveX : 0);
                 const finalY = gy + (isMovingSelection ? moveY : 0);
@@ -822,7 +823,7 @@ function draw() {
 
         ctx.fillStyle = 'rgba(33, 150, 243, 0.2)';
         ctx.fillRect(startScreenX, startScreenY, w, h);
-        
+
         ctx.strokeStyle = '#2196F3';
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 5]);
@@ -833,13 +834,13 @@ function draw() {
     // 5. Dessiner le fantôme du pattern (si outil pattern actif)
     if (currentTool === 'pattern' && patternGhost.length > 0) {
         const { x: mx, y: my } = screenToWorld(lastMouseX, lastMouseY);
-        
+
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.beginPath();
         for (const p of patternGhost) {
             const px = mx + p.x;
             const py = my + p.y;
-            
+
             // Vérifier visibilité (optionnel pour ghost mais mieux)
             if (px >= minX && px <= maxX && py >= minY && py <= maxY) {
                 const screenX = px * scale + offsetX;
@@ -868,7 +869,7 @@ function loop(timestamp) {
         // Si en pause, on redessine quand même pour la fluidité du pan/zoom
         // Mais on limite le redraw aux événements pour économiser la batterie (géré par les listeners)
     }
-    
+
     if (isRunning) {
         requestAnimationFrame(loop);
     }
@@ -886,11 +887,11 @@ function screenToWorld(sx, sy) {
 // Zoom (Molette)
 canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    
+
     const zoomIntensity = 0.1;
     const mouseX = e.clientX;
     const mouseY = e.clientY;
-    
+
     // Calculer la position de la souris dans le monde AVANT le zoom
     const worldXBefore = (mouseX - offsetX) / scale;
     const worldYBefore = (mouseY - offsetY) / scale;
@@ -912,21 +913,22 @@ canvas.addEventListener('wheel', (e) => {
     draw();
 }, { passive: false });
 
-// Panoramique (Clic Droit ou Molette Clic) & Dessin (Clic Gauche)
-canvas.addEventListener('mousedown', (e) => {
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
+// --- Unified Input Handling (Mouse & Touch) ---
 
-    // Clic Droit ou Molette -> Panoramique (Toujours dispo sauf si outil Hand actif en clic gauche)
-    if (e.button === 2 || e.button === 1) { 
+function onPointerDown(x, y, button) {
+    lastMouseX = x;
+    lastMouseY = y;
+
+    // Clic Droit ou Molette -> Panoramique
+    if (button === 2 || button === 1) {
         isDragging = true;
         canvas.style.cursor = 'grabbing';
         return;
-    } 
-    
-    if (e.button === 0) { // Clic gauche
-        const { x, y } = screenToWorld(e.clientX, e.clientY);
-        
+    }
+
+    if (button === 0) { // Clic gauche
+        const { x: wx, y: wy } = screenToWorld(x, y);
+
         if (currentTool === 'hand') {
             isDragging = true;
             canvas.style.cursor = 'grabbing';
@@ -934,25 +936,24 @@ canvas.addEventListener('mousedown', (e) => {
             // Tamponner le pattern
             if (patternGhost.length > 0) {
                 for (const p of patternGhost) {
-                    liveCells.add(`${x + p.x},${y + p.y}`);
+                    liveCells.add(`${wx + p.x},${wy + p.y}`);
                 }
                 draw();
                 updateUI();
             }
         } else if (currentTool === 'select') {
-            // Gestion de la sélection (inchangée)
-            if (selectionBox && 
-                x >= selectionBox.x && x < selectionBox.x + selectionBox.w &&
-                y >= selectionBox.y && y < selectionBox.y + selectionBox.h) {
-                
+            if (selectionBox &&
+                wx >= selectionBox.x && wx < selectionBox.x + selectionBox.w &&
+                wy >= selectionBox.y && wy < selectionBox.y + selectionBox.h) {
+
                 isMovingSelection = true;
-                selectionDragStart = { x: e.clientX, y: e.clientY };
+                selectionDragStart = { x: x, y: y }; // Screen coords pour drag
                 selectionOffset = { x: 0, y: 0 };
             } else {
                 isSelecting = true;
                 selectionBox = null;
                 selectedCells.clear();
-                selectionDragStart = { x, y };
+                selectionDragStart = { x: wx, y: wy }; // World coords pour création
             }
         } else {
             // Outil Dessin (Pencil) ou Gomme (Eraser)
@@ -964,46 +965,42 @@ canvas.addEventListener('mousedown', (e) => {
             }
 
             isDrawing = true;
-            const key = `${x},${y}`;
-            
+            const key = `${wx},${wy}`;
+
             if (currentTool === 'eraser') {
-                drawMode = false; // Force effacer
+                drawMode = false;
             } else {
-                // Pencil: Toggle ou Draw ? Habituellement Pencil ajoute, mais toggle est sympa.
-                // Restons sur le comportement précédent: Toggle au clic initial, puis maintien de l'état
                 drawMode = !liveCells.has(key);
             }
-            toggleCell(x, y, drawMode);
+            toggleCell(wx, wy, drawMode);
         }
     }
     draw();
-});
+}
 
-window.addEventListener('mousemove', (e) => {
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
+function onPointerMove(x, y, dx, dy) {
+    lastMouseX = x;
+    lastMouseY = y;
 
     if (isDragging) {
-        const dx = e.movementX;
-        const dy = e.movementY;
         offsetX += dx;
         offsetY += dy;
         draw();
     } else if (isDrawing) {
-        const { x, y } = screenToWorld(e.clientX, e.clientY);
-        toggleCell(x, y, drawMode);
+        const { x: wx, y: wy } = screenToWorld(x, y);
+        toggleCell(wx, wy, drawMode);
     } else if (isSelecting) {
         draw();
     } else if (isMovingSelection) {
-        selectionOffset.x = e.clientX - selectionDragStart.x;
-        selectionOffset.y = e.clientY - selectionDragStart.y;
+        selectionOffset.x = x - selectionDragStart.x;
+        selectionOffset.y = y - selectionDragStart.y;
         draw();
     } else if (currentTool === 'pattern') {
-        draw(); // Redessiner pour le ghost
+        draw();
     }
-});
+}
 
-window.addEventListener('mouseup', (e) => {
+function onPointerUp(x, y, isCtrl) {
     if (isDragging) {
         isDragging = false;
         canvas.style.cursor = currentTool === 'hand' ? 'grab' : (currentTool === 'select' ? 'default' : 'crosshair');
@@ -1011,25 +1008,25 @@ window.addEventListener('mouseup', (e) => {
     if (isDrawing) {
         isDrawing = false;
     }
-    
+
     if (isSelecting) {
         isSelecting = false;
-        const { x: endX, y: endY } = screenToWorld(e.clientX, e.clientY);
+        const { x: endX, y: endY } = screenToWorld(x, y);
         const startX = selectionDragStart.x;
         const startY = selectionDragStart.y;
 
         // Normaliser le rectangle
-        const x = Math.min(startX, endX);
-        const y = Math.min(startY, endY);
+        const rx = Math.min(startX, endX);
+        const ry = Math.min(startY, endY);
         const w = Math.abs(endX - startX) + 1;
         const h = Math.abs(endY - startY) + 1;
 
         if (w > 0 && h > 0) {
-            selectionBox = { x, y, w, h };
+            selectionBox = { x: rx, y: ry, w, h };
             selectedCells.clear();
             for (const key of liveCells) {
                 const [cx, cy] = key.split(',').map(Number);
-                if (cx >= x && cx < x + w && cy >= y && cy < y + h) {
+                if (cx >= rx && cx < rx + w && cy >= ry && cy < ry + h) {
                     selectedCells.add(key);
                 }
             }
@@ -1041,13 +1038,13 @@ window.addEventListener('mouseup', (e) => {
 
     if (isMovingSelection) {
         isMovingSelection = false;
-        
+
         const moveX = Math.round(selectionOffset.x / scale);
         const moveY = Math.round(selectionOffset.y / scale);
-        
+
         if (moveX !== 0 || moveY !== 0) {
             const newCells = new Set();
-            const isCopy = e.ctrlKey;
+            const isCopy = isCtrl;
 
             if (!isCopy) {
                 for (const key of selectedCells) {
@@ -1066,10 +1063,82 @@ window.addEventListener('mouseup', (e) => {
             selectionBox.x += moveX;
             selectionBox.y += moveY;
         }
-        
+
         selectionOffset = { x: 0, y: 0 };
         draw();
         updateUI();
+    }
+}
+
+// Mouse Listeners
+canvas.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY, e.button));
+window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY, e.movementX, e.movementY));
+window.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY, e.ctrlKey));
+
+// Touch Listeners
+let lastPinchDist = -1;
+let isPinching = false;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (e.cancelable) e.preventDefault();
+
+    if (e.touches.length === 1) {
+        const t = e.touches[0];
+        // Init last positions for drag calc
+        lastMouseX = t.clientX;
+        lastMouseY = t.clientY;
+        onPointerDown(t.clientX, t.clientY, 0);
+    } else if (e.touches.length === 2) {
+        isPinching = true;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        lastPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (e.cancelable) e.preventDefault();
+
+    if (e.touches.length === 1 && !isPinching) {
+        const t = e.touches[0];
+        const dx = t.clientX - lastMouseX;
+        const dy = t.clientY - lastMouseY;
+        onPointerMove(t.clientX, t.clientY, dx, dy);
+    } else if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+        if (lastPinchDist > 0) {
+            const zoom = dist / lastPinchDist;
+            const cx = (t1.clientX + t2.clientX) / 2;
+            const cy = (t1.clientY + t2.clientY) / 2;
+
+            const worldXBefore = (cx - offsetX) / scale;
+            const worldYBefore = (cy - offsetY) / scale;
+
+            scale *= zoom;
+            scale = Math.max(0.05, Math.min(scale, 200));
+
+            offsetX = cx - worldXBefore * scale;
+            offsetY = cy - worldYBefore * scale;
+
+            draw();
+        }
+        lastPinchDist = dist;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    if (e.cancelable) e.preventDefault();
+    // Touchend fires for the touch that was removed
+    // We assume if 0 touches left, interaction ended
+    if (e.touches.length === 0) {
+        onPointerUp(lastMouseX, lastMouseY, false);
+    }
+    if (e.touches.length < 2) {
+        lastPinchDist = -1;
+        isPinching = false;
     }
 });
 
@@ -1085,7 +1154,7 @@ window.addEventListener('keydown', (e) => {
             updateUI();
         }
     }
-    
+
     // Outils
     switch(e.key.toLowerCase()) {
         case 'd': setTool('draw'); break;
@@ -1114,10 +1183,10 @@ function toggleCell(x, y, state) {
 
 function setTool(tool) {
     currentTool = tool;
-    
+
     // Reset UI states
     [pencilBtn, eraserBtn, selectBtn, handBtn, patternBtn].forEach(btn => btn.classList.remove('active'));
-    
+
     // Set active button
     if (tool === 'draw') pencilBtn.classList.add('active');
     else if (tool === 'erase') eraserBtn.classList.add('active');
@@ -1196,9 +1265,9 @@ const ctxCancel = document.getElementById('ctx-cancel');
 
 canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
-    
+
     let showSelectionMenu = false;
-    
+
     // Si on a une sélection et qu'on clique dedans
     if (selectionBox) {
         const { x, y } = screenToWorld(e.clientX, e.clientY);
@@ -1207,13 +1276,13 @@ canvas.addEventListener('contextmenu', e => {
             showSelectionMenu = true;
         }
     }
-    
+
     if (showSelectionMenu) {
         ctxSelectionGroup.style.display = 'block';
     } else {
         ctxSelectionGroup.style.display = 'none';
     }
-    
+
     // Afficher le menu
     contextMenu.style.left = `${e.clientX}px`;
     contextMenu.style.top = `${e.clientY}px`;
@@ -1232,18 +1301,18 @@ ctxDuplicate.addEventListener('click', () => {
     const newCells = new Set();
     const offsetX = 2;
     const offsetY = 2;
-    
+
     for (const key of selectedCells) {
         const [cx, cy] = key.split(',').map(Number);
         const newKey = `${cx + offsetX},${cy + offsetY}`;
         liveCells.add(newKey);
         newCells.add(newKey);
     }
-    
+
     selectedCells = newCells;
     selectionBox.x += offsetX;
     selectionBox.y += offsetY;
-    
+
     draw();
     updateUI();
     contextMenu.classList.remove('visible');
@@ -1286,7 +1355,7 @@ ctxCancel.addEventListener('click', () => {
 playPauseBtn.addEventListener('click', () => {
     isRunning = !isRunning;
     const iconPath = playPauseBtn.querySelector('path');
-    
+
     if (isRunning) {
         // Icone Pause
         iconPath.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z');
@@ -1304,12 +1373,12 @@ clearBtn.addEventListener('click', () => {
     liveCells.clear();
     generation = 0;
     isRunning = false;
-    
+
     // Reset Play Button
     const iconPath = playPauseBtn.querySelector('path');
     iconPath.setAttribute('d', 'M8 5v14l11-7z');
     playPauseBtn.classList.remove('active');
-    
+
     draw();
     updateUI();
 });
@@ -1317,7 +1386,7 @@ clearBtn.addEventListener('click', () => {
 randomBtn.addEventListener('click', () => {
     liveCells.clear();
     generation = 0;
-    
+
     // Remplir une zone visible aléatoirement
     const cols = Math.ceil(canvas.width / scale);
     const rows = Math.ceil(canvas.height / scale);
