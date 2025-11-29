@@ -12,6 +12,7 @@
     box-sizing: border-box;
     user-select: none;
     -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body, html {
@@ -31,11 +32,13 @@ canvas {
     width: 100vw;
     height: 100vh;
     cursor: crosshair;
+    touch-action: none;
 }
 
 #ui-layer {
     position: absolute;
     bottom: 10px;
+    bottom: env(safe-area-inset-bottom, 10px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -464,4 +467,131 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .pattern-actions {
     display: none;
+}
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .hint {
+        display: none;
+    }
+
+    .mobile-only {
+        display: flex;
+    }
+
+    .controls {
+        padding: 8px 16px;
+        gap: 12px;
+        width: 95vw;
+        overflow-x: visible; /* Was auto, changed to prevent cutting off if needed */
+        justify-content: space-between;
+    }
+
+    .separator {
+        display: none;
+    }
+
+    .info {
+        display: none;
+    }
+
+    /* Increase touch targets */
+    button {
+        padding: 12px;
+    }
+
+    button svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .slider-container {
+        display: none;
+    }
+
+    /* Pattern Modal adaptations */
+    .categories-list {
+        flex-wrap: wrap;
+        padding-bottom: 20px;
+        gap: 10px;
+    }
+
+    .category-btn {
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border-bottom: none;
+    }
+
+    .category-btn.active {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .category-btn::after {
+        display: none;
+    }
+
+    .patterns-grid {
+        grid-template-columns: 1fr; /* Single column on mobile */
+        padding: 20px;
+    }
+
+    /* Safe Area Padding for Modals */
+    .modal-content {
+        height: 90vh;
+        margin: auto;
+        bottom: 0;
+        border-radius: 24px 24px 0 0;
+        width: 100%;
+        max-width: 100%;
+        position: absolute;
+    }
+
+    .modal-header {
+        padding-top: max(25px, env(safe-area-inset-top));
+    }
+
+    .modal-body {
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Settings Modal Specifics */
+.settings-body {
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.setting-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.stat-box {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.small-modal {
+    height: auto !important;
+    min-height: 40vh;
 }
