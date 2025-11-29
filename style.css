@@ -12,6 +12,7 @@
     box-sizing: border-box;
     user-select: none;
     -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body, html {
@@ -31,11 +32,13 @@ canvas {
     width: 100vw;
     height: 100vh;
     cursor: crosshair;
+    touch-action: none;
 }
 
 #ui-layer {
     position: absolute;
     bottom: 10px;
+    bottom: env(safe-area-inset-bottom, 10px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
