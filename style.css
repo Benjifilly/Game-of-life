@@ -12,6 +12,7 @@
     box-sizing: border-box;
     user-select: none;
     -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body, html {
@@ -31,11 +32,13 @@ canvas {
     width: 100vw;
     height: 100vh;
     cursor: crosshair;
+    touch-action: none;
 }
 
 #ui-layer {
     position: absolute;
     bottom: 10px;
+    bottom: env(safe-area-inset-bottom, 10px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -464,4 +467,34 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .pattern-actions {
     display: none;
+}
+@media (max-width: 768px) {
+    .hint {
+        display: none;
+    }
+
+    .controls {
+        padding: 8px 16px;
+        gap: 12px;
+        width: 95vw;
+        overflow-x: auto;
+        justify-content: space-between;
+    }
+
+    .separator {
+        display: none;
+    }
+
+    .info {
+        display: none; /* Hide stats on mobile to save space */
+    }
+
+    /* Increase touch targets slightly */
+    button {
+        padding: 10px;
+    }
+
+    .slider-container {
+        display: none; /* Hide speed slider on mobile to save space */
+    }
 }
