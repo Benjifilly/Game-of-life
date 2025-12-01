@@ -9,6 +9,18 @@ let lastFrameTime = 0;
 let simulationSpeed = 30; // Images par seconde cibles pour la simulation
 let frameInterval = 1000 / simulationSpeed;
 
+// --- Statistiques Avancées ---
+let maxPopulation = 0;
+let births = 0;
+let deaths = 0;
+let statsHistory = []; // { gen, pop }
+const MAX_STATS_HISTORY = 100;
+
+// --- Apparence ---
+let cellColor = '#ffffff';
+let backgroundColor = '#000000';
+let gridColor = '#1a1a1a';
+
 // --- Outils & Sélection ---
 let currentTool = 'draw'; // 'draw' | 'erase' | 'select' | 'hand' | 'pattern'
 let selectionBox = null; // { x, y, w, h } (Coordonnées monde)
@@ -17,10 +29,75 @@ let isSelecting = false;
 let isMovingSelection = false;
 let selectionDragStart = null; // { x, y }
 let selectionOffset = { x: 0, y: 0 }; // Déplacement visuel temporaire
+let hasDragged = false; // Pour empêcher le menu contextuel après un drag
+let currentStrokeChanges = new Map(); // key -> previousState (boolean) pour annuler le trait si pinch
 
 // --- Patterns ---
 let currentPattern = null; // Nom du pattern sélectionné
 let patternGhost = []; // Liste des offsets [{x, y}] pour le pattern
+
+// --- Historique (Undo/Redo) ---
+let history = [];
+let historyStep = -1;
+const MAX_HISTORY = 50;
+
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+
+function saveState() {
+    // Couper l'historique si on est au milieu
+    if (historyStep < history.length - 1) {
+        history = history.slice(0, historyStep + 1);
+    }
+
+    // Sauvegarder l'état actuel
+    history.push(new Set(liveCells));
+    historyStep++;
+
+    // Limiter la taille
+    if (history.length > MAX_HISTORY) {
+        history.shift();
+        historyStep--;
+    }
+
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyStep > 0) {
+        historyStep--;
+        liveCells = new Set(history[historyStep]);
+        selectionBox = null;
+        selectedCells.clear();
+        draw();
+        updateUI();
+        updateUndoRedoButtons();
+    }
+}
+
+function redo() {
+    if (historyStep < history.length - 1) {
+        historyStep++;
+        liveCells = new Set(history[historyStep]);
+        selectionBox = null;
+        selectedCells.clear();
+        draw();
+        updateUI();
+        updateUndoRedoButtons();
+    }
+}
+
+function updateUndoRedoButtons() {
+    if (undoBtn && redoBtn) {
+        undoBtn.disabled = historyStep <= 0;
+        redoBtn.disabled = historyStep >= history.length - 1;
+        undoBtn.style.opacity = undoBtn.disabled ? 0.5 : 1;
+        redoBtn.style.opacity = redoBtn.disabled ? 0.5 : 1;
+    }
+}
+
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
 
 // Helper to parse visual grids
 function parseGrid(str) {
@@ -166,7 +243,6 @@ OO.OOOOOO` },
         { name: "Clock", rle: `
 ..O.
 O.O.
-.O.O
 .O.O
 .O..` },
         { name: "Queen Bee Shuttle", rle: `
@@ -355,6 +431,7 @@ let lastMouseX = 0;
 let lastMouseY = 0;
 let isDrawing = false;
 let drawMode = true; // true = ajouter, false = effacer
+let showGrid = true; // Afficher la grille
 
 // --- Éléments UI ---
 const playPauseBtn = document.getElementById('playPauseBtn');
@@ -372,7 +449,7 @@ const genDisplay = document.getElementById('generation');
 
 // --- Modal Logic ---
 const patternModal = document.getElementById('patternModal');
-const closeModalBtn = document.querySelector('.close-modal');
+const closePatternModalBtn = patternModal.querySelector('.close-modal');
 const categoriesList = document.getElementById('categoriesList');
 const patternsGrid = document.getElementById('patternsGrid');
 let activePreviewInterval = null;
@@ -386,11 +463,15 @@ function openPatternModal() {
 }
 
 function closePatternModal() {
-    patternModal.style.display = 'none';
-    stopActivePreview();
+    patternModal.classList.add('closing');
+    patternModal.addEventListener('animationend', () => {
+        patternModal.classList.remove('closing');
+        patternModal.style.display = 'none';
+        stopActivePreview();
+    }, { once: true });
 }
 
-closeModalBtn.addEventListener('click', closePatternModal);
+closePatternModalBtn.addEventListener('click', closePatternModal);
 window.addEventListener('click', (e) => {
     if (e.target === patternModal) closePatternModal();
 });
@@ -662,15 +743,41 @@ function nextGeneration() {
     }
 
     // 2. Appliquer les règles
+    let currentBirths = 0;
+    let currentDeaths = 0;
+
     for (const [cellKey, count] of neighborCounts) {
         if (count === 3) {
             // Naissance
             nextCells.add(cellKey);
+            if (!liveCells.has(cellKey)) currentBirths++;
         } else if (count === 2 && liveCells.has(cellKey)) {
             // Survie
             nextCells.add(cellKey);
         }
         // Sinon mort (sous-population ou surpopulation)
+    }
+
+    // Calculer les morts (cellules vivantes qui ne sont pas dans nextCells)
+    // Note: C'est plus performant de le faire ici que d'itérer sur liveCells si liveCells est grand
+    // Mais pour avoir le compte exact, on doit vérifier.
+    // Optimisation: deaths = liveCells.size - (nextCells.size - births)
+    // Explication: La nouvelle population est composée des survivants + naissances.
+    // Donc survivants = nextCells.size - births.
+    // Les morts sont ceux qui étaient vivants et ne sont pas survivants.
+    // deaths = liveCells.size - survivants.
+    
+    births = currentBirths;
+    deaths = liveCells.size - (nextCells.size - births);
+    maxPopulation = Math.max(maxPopulation, nextCells.size);
+
+    // Historique pour le graphique
+    statsHistory.push({
+        gen: generation + 1,
+        pop: nextCells.size
+    });
+    if (statsHistory.length > MAX_STATS_HISTORY) {
+        statsHistory.shift();
     }
 
     liveCells = nextCells;
@@ -689,12 +796,12 @@ function nextGeneration() {
 
 function draw() {
     // 1. Effacer l'écran (Fond Noir)
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // 2. Dessiner la grille (optionnel, s'estompe si trop dézoomé)
-    if (scale > 5) {
-        ctx.strokeStyle = '#1a1a1a';
+    if (showGrid && scale > 5) {
+        ctx.strokeStyle = gridColor;
         ctx.lineWidth = 1;
         ctx.beginPath();
 
@@ -720,7 +827,7 @@ function draw() {
     }
 
     // 3. Dessiner les cellules vivantes
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = cellColor;
 
     // Optimisation: Ne dessiner que ce qui est visible
     // On pourrait itérer sur toutes les cellules si le zoom est loin,
@@ -918,6 +1025,7 @@ canvas.addEventListener('wheel', (e) => {
 function onPointerDown(x, y, button) {
     lastMouseX = x;
     lastMouseY = y;
+    hasDragged = false;
 
     // Clic Droit ou Molette -> Panoramique
     if (button === 2 || button === 1) {
@@ -940,6 +1048,8 @@ function onPointerDown(x, y, button) {
                 }
                 draw();
                 updateUI();
+                saveState();
+                setTool('draw'); // Switch back to draw mode
             }
         } else if (currentTool === 'select') {
             if (selectionBox &&
@@ -967,7 +1077,7 @@ function onPointerDown(x, y, button) {
             isDrawing = true;
             const key = `${wx},${wy}`;
 
-            if (currentTool === 'eraser') {
+            if (currentTool === 'erase') {
                 drawMode = false;
             } else {
                 drawMode = !liveCells.has(key);
@@ -983,6 +1093,7 @@ function onPointerMove(x, y, dx, dy) {
     lastMouseY = y;
 
     if (isDragging) {
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) hasDragged = true;
         offsetX += dx;
         offsetY += dy;
         draw();
@@ -1007,6 +1118,8 @@ function onPointerUp(x, y, isCtrl) {
     }
     if (isDrawing) {
         isDrawing = false;
+        currentStrokeChanges.clear(); // Valider le trait
+        saveState();
     }
 
     if (isSelecting) {
@@ -1067,6 +1180,7 @@ function onPointerUp(x, y, isCtrl) {
         selectionOffset = { x: 0, y: 0 };
         draw();
         updateUI();
+        saveState();
     }
 }
 
@@ -1078,6 +1192,12 @@ window.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY, e.ct
 // Touch Listeners
 let lastPinchDist = -1;
 let isPinching = false;
+let lastPinchCenter = { x: 0, y: 0 };
+
+// Empêcher les gestes natifs iOS (zoom page, retour arrière)
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+document.addEventListener('gestureend', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => {
     if (e.cancelable) e.preventDefault();
@@ -1089,10 +1209,19 @@ canvas.addEventListener('touchstart', (e) => {
         lastMouseY = t.clientY;
         onPointerDown(t.clientX, t.clientY, 0);
     } else if (e.touches.length === 2) {
+        // Si on était en train de dessiner avec le premier doigt, on annule
+        if (isDrawing) {
+            cancelCurrentStroke();
+        }
+        
         isPinching = true;
         const t1 = e.touches[0];
         const t2 = e.touches[1];
         lastPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        lastPinchCenter = {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
     }
 }, { passive: false });
 
@@ -1108,24 +1237,38 @@ canvas.addEventListener('touchmove', (e) => {
         const t1 = e.touches[0];
         const t2 = e.touches[1];
         const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        const currentCenter = {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
 
+        // Pan (Déplacement à 2 doigts)
+        const dx = currentCenter.x - lastPinchCenter.x;
+        const dy = currentCenter.y - lastPinchCenter.y;
+        offsetX += dx;
+        offsetY += dy;
+
+        // Zoom (Pincement)
         if (lastPinchDist > 0) {
             const zoom = dist / lastPinchDist;
-            const cx = (t1.clientX + t2.clientX) / 2;
-            const cy = (t1.clientY + t2.clientY) / 2;
+            
+            // Calculer la position monde sous le centre du pincement (après le pan)
+            const worldX = (currentCenter.x - offsetX) / scale;
+            const worldY = (currentCenter.y - offsetY) / scale;
 
-            const worldXBefore = (cx - offsetX) / scale;
-            const worldYBefore = (cy - offsetY) / scale;
-
+            // Appliquer le zoom
             scale *= zoom;
             scale = Math.max(0.05, Math.min(scale, 200));
 
-            offsetX = cx - worldXBefore * scale;
-            offsetY = cy - worldYBefore * scale;
-
-            draw();
+            // Ajuster l'offset pour maintenir le point monde sous le centre
+            offsetX = currentCenter.x - worldX * scale;
+            offsetY = currentCenter.y - worldY * scale;
         }
+
         lastPinchDist = dist;
+        lastPinchCenter = currentCenter;
+        
+        draw();
     }
 }, { passive: false });
 
@@ -1152,7 +1295,18 @@ window.addEventListener('keydown', (e) => {
             selectedCells.clear();
             draw();
             updateUI();
+            saveState();
         }
+    }
+
+    // Undo / Redo
+    if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+    }
+    if (e.ctrlKey && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        redo();
     }
 
     // Outils
@@ -1170,13 +1324,35 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 function toggleCell(x, y, state) {
     const key = `${x},${y}`;
-    if (state) {
-        liveCells.add(key);
-    } else {
-        liveCells.delete(key);
+    const wasAlive = liveCells.has(key);
+
+    if (state !== wasAlive) {
+        // Enregistrer le changement pour pouvoir l'annuler si c'est un début de pinch
+        if (isDrawing && !currentStrokeChanges.has(key)) {
+            currentStrokeChanges.set(key, wasAlive);
+        }
+
+        if (state) {
+            liveCells.add(key);
+        } else {
+            liveCells.delete(key);
+        }
+        draw();
+        updateUI();
     }
-    draw();
-    updateUI();
+}
+
+function cancelCurrentStroke() {
+    if (currentStrokeChanges.size > 0) {
+        for (const [key, wasAlive] of currentStrokeChanges) {
+            if (wasAlive) liveCells.add(key);
+            else liveCells.delete(key);
+        }
+        currentStrokeChanges.clear();
+        draw();
+        updateUI();
+    }
+    isDrawing = false;
 }
 
 // --- Gestion des Outils ---
@@ -1213,7 +1389,140 @@ function setTool(tool) {
 function updateUI() {
     popDisplay.textContent = liveCells.size;
     genDisplay.textContent = generation;
+    updateStatsUI();
 }
+
+function updateStatsUI() {
+    // Update modal values if open
+    if (settingsModal.style.display !== 'none') {
+        popModal.textContent = liveCells.size;
+        genModal.textContent = generation;
+        
+        const maxPopDisplay = document.getElementById('maxPopDisplay');
+        const birthsDisplay = document.getElementById('birthsDisplay');
+        const deathsDisplay = document.getElementById('deathsDisplay');
+        
+        if (maxPopDisplay) maxPopDisplay.textContent = maxPopulation;
+        if (birthsDisplay) birthsDisplay.textContent = births;
+        if (deathsDisplay) deathsDisplay.textContent = deaths;
+
+        drawStatsChart();
+    }
+}
+
+function drawStatsChart(highlightIndex = -1) {
+    const canvas = document.getElementById('statsChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    ctx.clearRect(0, 0, width, height);
+    
+    if (statsHistory.length < 2) return;
+    
+    // Trouver le min/max pour l'échelle Y
+    let minPop = Infinity;
+    let maxPop = -Infinity;
+    
+    statsHistory.forEach(s => {
+        if (s.pop < minPop) minPop = s.pop;
+        if (s.pop > maxPop) maxPop = s.pop;
+    });
+    
+    // Ajouter une marge
+    const range = maxPop - minPop;
+    const padding = range * 0.1;
+    const yMin = Math.max(0, minPop - padding);
+    const yMax = maxPop + padding;
+    
+    // Dessiner la ligne
+    ctx.beginPath();
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth = 2;
+    
+    const stepX = width / (MAX_STATS_HISTORY - 1);
+    
+    statsHistory.forEach((s, i) => {
+        const x = i * stepX;
+        // Inverser Y car canvas 0 est en haut
+        const normalizedY = (s.pop - yMin) / (yMax - yMin || 1);
+        const y = height - (normalizedY * height);
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    
+    ctx.stroke();
+    
+    // Remplir sous la courbe
+    ctx.lineTo(statsHistory.length * stepX, height);
+    ctx.lineTo(0, height);
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.1)';
+    ctx.fill();
+
+    // Draw Highlight
+    if (highlightIndex !== -1 && highlightIndex < statsHistory.length) {
+        const x = highlightIndex * stepX;
+        const s = statsHistory[highlightIndex];
+        
+        // Vertical Line
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Dot
+        const normalizedY = (s.pop - yMin) / (yMax - yMin || 1);
+        const y = height - (normalizedY * height);
+        
+        ctx.beginPath();
+        ctx.fillStyle = '#fff';
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Tooltip Text
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = x > width / 2 ? 'right' : 'left';
+        const textX = x > width / 2 ? x - 10 : x + 10;
+        ctx.fillText(`Gen: ${s.gen}`, textX, 20);
+        ctx.fillText(`Pop: ${s.pop}`, textX, 35);
+    }
+}
+
+function initChartInteractions() {
+    const canvas = document.getElementById('statsChart');
+    if (!canvas) return;
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (statsHistory.length < 2) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const width = rect.width;
+        
+        const stepX = width / (MAX_STATS_HISTORY - 1);
+        let index = Math.round(x / stepX);
+        
+        if (index < 0) index = 0;
+        if (index >= statsHistory.length) index = statsHistory.length - 1;
+        
+        drawStatsChart(index);
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        drawStatsChart(-1);
+    });
+}
+
+// Call this at the end of script
+initChartInteractions();
 
 pencilBtn.addEventListener('click', () => setTool('draw'));
 eraserBtn.addEventListener('click', () => setTool('erase'));
@@ -1265,6 +1574,7 @@ const ctxCancel = document.getElementById('ctx-cancel');
 
 canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
+    if (hasDragged) return;
 
     let showSelectionMenu = false;
 
@@ -1315,6 +1625,7 @@ ctxDuplicate.addEventListener('click', () => {
 
     draw();
     updateUI();
+    saveState();
     contextMenu.classList.remove('visible');
 });
 
@@ -1326,6 +1637,7 @@ ctxDeleteSel.addEventListener('click', () => {
         selectedCells.clear();
         draw();
         updateUI();
+        saveState();
     }
     contextMenu.classList.remove('visible');
 });
@@ -1373,6 +1685,12 @@ clearBtn.addEventListener('click', () => {
     liveCells.clear();
     generation = 0;
     isRunning = false;
+    
+    // Reset Stats
+    maxPopulation = 0;
+    births = 0;
+    deaths = 0;
+    statsHistory = [];
 
     // Reset Play Button
     const iconPath = playPauseBtn.querySelector('path');
@@ -1381,11 +1699,18 @@ clearBtn.addEventListener('click', () => {
 
     draw();
     updateUI();
+    saveState();
 });
 
 randomBtn.addEventListener('click', () => {
     liveCells.clear();
     generation = 0;
+    
+    // Reset Stats
+    maxPopulation = 0;
+    births = 0;
+    deaths = 0;
+    statsHistory = [];
 
     // Remplir une zone visible aléatoirement
     const cols = Math.ceil(canvas.width / scale);
@@ -1402,13 +1727,268 @@ randomBtn.addEventListener('click', () => {
     }
     draw();
     updateUI();
+    saveState();
 });
 
 speedRange.addEventListener('input', (e) => {
     simulationSpeed = parseInt(e.target.value);
     frameInterval = 1000 / simulationSpeed;
+    // Sync with modal slider
+    if (speedRangeModal) {
+        speedRangeModal.value = e.target.value;
+        speedValueDisplay.textContent = `${e.target.value} FPS`;
+    }
 });
+
+// --- Settings Modal ---
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeSettingsModal = document.getElementById('closeSettingsModal');
+const speedRangeModal = document.getElementById('speedRangeModal');
+const speedValueDisplay = document.getElementById('speedValueDisplay');
+const showGridToggle = document.getElementById('showGridToggle');
+const cellColorPicker = document.getElementById('cellColorPicker');
+const bgColorPicker = document.getElementById('bgColorPicker');
+const gridColorPicker = document.getElementById('gridColorPicker');
+const popModal = document.getElementById('popModal');
+const genModal = document.getElementById('genModal');
+
+function openSettingsModal() {
+    settingsModal.style.display = 'block';
+    // Sync values
+    speedRangeModal.value = simulationSpeed;
+    speedValueDisplay.textContent = `${simulationSpeed} FPS`;
+    popModal.textContent = liveCells.size;
+    genModal.textContent = generation;
+
+    // Sync colors
+    if (cellColorPicker) cellColorPicker.value = cellColor;
+    if (bgColorPicker) bgColorPicker.value = backgroundColor;
+    if (gridColorPicker) gridColorPicker.value = gridColor;
+}
+
+function closeSettingsModalFn() {
+    settingsModal.classList.add('closing');
+    settingsModal.addEventListener('animationend', () => {
+        settingsModal.classList.remove('closing');
+        settingsModal.style.display = 'none';
+    }, { once: true });
+}
+
+settingsBtn.addEventListener('click', openSettingsModal);
+closeSettingsModal.addEventListener('click', closeSettingsModalFn);
+window.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettingsModalFn();
+});
+
+speedRangeModal.addEventListener('input', (e) => {
+    simulationSpeed = parseInt(e.target.value);
+    frameInterval = 1000 / simulationSpeed;
+    speedValueDisplay.textContent = `${e.target.value} FPS`;
+    // Sync with main slider
+    speedRange.value = e.target.value;
+});
+
+showGridToggle.addEventListener('change', (e) => {
+    showGrid = e.target.checked;
+    draw();
+});
+
+cellColorPicker.addEventListener('input', (e) => {
+    cellColor = e.target.value;
+    draw();
+});
+
+bgColorPicker.addEventListener('input', (e) => {
+    backgroundColor = e.target.value;
+    draw();
+});
+
+gridColorPicker.addEventListener('input', (e) => {
+    gridColor = e.target.value;
+    draw();
+});
+
+// --- Toolbar Dragging (Desktop Only) ---
+const controls = document.querySelector('.controls');
+const dragHandle = document.querySelector('.drag-handle');
+const uiLayer = document.getElementById('ui-layer');
+let toolbarDrag = { active: false, startX: 0, startY: 0, initialLeft: 0, initialTop: 0 };
+
+// Create Snap Preview Element
+const snapPreview = document.createElement('div');
+snapPreview.className = 'snap-preview';
+document.body.appendChild(snapPreview);
+
+function initToolbarDrag() {
+    // Only enable on desktop
+    if (window.matchMedia("(max-width: 768px)").matches) return;
+
+    // Only drag from handle
+    dragHandle.addEventListener('mousedown', startToolbarDrag);
+    window.addEventListener('mousemove', moveToolbarDrag);
+    window.addEventListener('mouseup', endToolbarDrag);
+    window.addEventListener('resize', resetToolbarPosition);
+}
+
+function startToolbarDrag(e) {
+    e.preventDefault();
+    toolbarDrag.active = true;
+    toolbarDrag.startX = e.clientX;
+    toolbarDrag.startY = e.clientY;
+    
+    const rect = controls.getBoundingClientRect();
+    
+    // Move to body to ensure fixed positioning works relative to viewport
+    // (Escapes #ui-layer transform)
+    if (controls.parentElement !== document.body) {
+        document.body.appendChild(controls);
+    }
+    
+    // Switch to fixed positioning relative to viewport
+    controls.style.position = 'fixed';
+    controls.style.left = rect.left + 'px';
+    controls.style.top = rect.top + 'px';
+    controls.style.bottom = 'auto';
+    controls.style.right = 'auto';
+    controls.style.transform = 'none'; 
+    controls.style.zIndex = '1000'; // Ensure it's on top
+    
+    // Remove docked classes to allow free movement
+    controls.classList.remove('docked', 'docked-left', 'docked-right');
+    controls.classList.add('dragging');
+    
+    toolbarDrag.initialLeft = rect.left;
+    toolbarDrag.initialTop = rect.top;
+    
+    document.body.style.cursor = 'grabbing';
+}
+
+function moveToolbarDrag(e) {
+    if (!toolbarDrag.active) return;
+    
+    const dx = e.clientX - toolbarDrag.startX;
+    const dy = e.clientY - toolbarDrag.startY;
+    
+    const newLeft = toolbarDrag.initialLeft + dx;
+    const newTop = toolbarDrag.initialTop + dy;
+    
+    controls.style.left = newLeft + 'px';
+    controls.style.top = newTop + 'px';
+
+    // Snap Preview Logic
+    const previewThreshold = 400; // Zone d'apparition du preview
+    const windowWidth = window.innerWidth;
+    
+    let opacity = 0;
+    let scale = 0.9;
+    let side = null;
+
+    if (e.clientX < previewThreshold) {
+        side = 'left';
+        // Calculer l'intensité (0 à 1) en fonction de la proximité du bord
+        // Plus on est proche de 0, plus c'est visible
+        const dist = Math.max(0, e.clientX);
+        const intensity = 1 - (dist / previewThreshold);
+        opacity = Math.max(0, Math.min(intensity, 1));
+        
+    } else if (e.clientX > windowWidth - previewThreshold) {
+        side = 'right';
+        const dist = Math.max(0, windowWidth - e.clientX);
+        const intensity = 1 - (dist / previewThreshold);
+        opacity = Math.max(0, Math.min(intensity, 1));
+    }
+
+    if (side) {
+        snapPreview.classList.add('visible', side);
+        snapPreview.classList.remove(side === 'left' ? 'right' : 'left');
+        
+        // Animation scale: 0.9 -> 1.0
+        scale = 0.9 + (0.1 * opacity);
+        
+        snapPreview.style.opacity = opacity;
+        snapPreview.style.transform = `translateY(-50%) scale(${scale})`;
+    } else {
+        snapPreview.classList.remove('visible', 'left', 'right');
+        snapPreview.style.opacity = 0;
+        snapPreview.style.transform = `translateY(-50%) scale(0.9)`;
+    }
+}
+
+function endToolbarDrag(e) {
+    if (!toolbarDrag.active) return;
+    
+    toolbarDrag.active = false;
+    document.body.style.cursor = '';
+    controls.classList.remove('dragging');
+    snapPreview.classList.remove('visible', 'left', 'right');
+    snapPreview.style.opacity = '0';
+    
+    // Snapping Logic
+    const snapThreshold = 120;
+    const windowWidth = window.innerWidth;
+    
+    if (e.clientX < snapThreshold) {
+        // Snap Left
+        dockToolbar('left');
+    } else if (e.clientX > windowWidth - snapThreshold) {
+        // Snap Right
+        dockToolbar('right');
+    } else {
+        // Float (keep current position but ensure inside bounds)
+        const rect = controls.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        let finalLeft = Math.max(0, Math.min(rect.left, maxX));
+        let finalTop = Math.max(0, Math.min(rect.top, maxY));
+        
+        controls.style.left = finalLeft + 'px';
+        controls.style.top = finalTop + 'px';
+    }
+}
+
+function dockToolbar(side) {
+    // Reset inline styles that conflict with classes
+    controls.style.left = '';
+    controls.style.top = '';
+    controls.style.right = '';
+    controls.style.bottom = '';
+    controls.style.transform = '';
+    
+    controls.classList.add('docked');
+    if (side === 'left') {
+        controls.classList.add('docked-left');
+        controls.classList.remove('docked-right');
+    } else {
+        controls.classList.add('docked-right');
+        controls.classList.remove('docked-left');
+    }
+}
+
+function resetToolbarPosition() {
+    if (window.matchMedia("(max-width: 768px)").matches) {
+        // Put back in ui-layer for mobile layout
+        if (controls.parentElement !== uiLayer) {
+            uiLayer.insertBefore(controls, uiLayer.firstChild);
+        }
+
+        // Reset to CSS defaults for mobile
+        controls.style.position = '';
+        controls.style.bottom = '';
+        controls.style.left = '';
+        controls.style.top = '';
+        controls.style.transform = '';
+        controls.style.right = '';
+        controls.style.zIndex = '';
+        controls.classList.remove('docked', 'docked-left', 'docked-right', 'dragging');
+    }
+}
+
+// Initialize
+initToolbarDrag();
 
 // Initial draw
 draw();
 updateUI();
+saveState(); // Initial state

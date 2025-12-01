@@ -25,6 +25,7 @@ body, html {
     font-family: var(--font-family);
     color: var(--text-color);
     letter-spacing: 0.02em;
+    overscroll-behavior: none; /* Empêche le rebond sur iOS */
 }
 
 canvas {
@@ -61,12 +62,175 @@ canvas {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     border: 1px solid var(--ui-border);
     pointer-events: auto;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+                width 0.3s ease,
+                height 0.3s ease,
+                opacity 0.2s ease;
+    position: relative; /* Default for mobile/initial */
 }
 
-.controls:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+.controls.dragging {
+    transition: none !important;
+    cursor: grabbing;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.3);
+    z-index: 1000;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    transition: color 0.2s;
+}
+
+.drag-handle:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.controls.vertical .drag-handle {
+    padding: 4px 0;
+    transform: rotate(90deg);
+}
+
+/* Docking Styles */
+.controls.docked {
+    position: fixed;
+    flex-direction: column;
+    padding: 12px;
+    width: auto;
+    min-width: auto;
+    height: auto;
+    gap: 12px;
+    border-radius: 20px; /* Carré arrondi */
+    background-color: rgba(15, 15, 15, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 
+                0 0 0 1px rgba(255, 255, 255, 0.08);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.controls.docked-left {
+    left: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+.controls.docked-right {
+    left: auto !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+/* Adjust content for vertical layout */
+.controls.docked button {
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px; /* Carré arrondi */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.controls.docked button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.controls.docked button svg {
+    width: 24px;
+    height: 24px;
+}
+
+.controls.docked .control-group {
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Hide unwanted elements in docked mode */
+.controls.docked .separator,
+.controls.docked .slider-container,
+.controls.docked .info {
+    display: none;
+}
+
+.controls.docked .drag-handle {
+    padding: 0;
+    transform: rotate(90deg);
+    width: 32px;
+    height: 24px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+}
+
+.controls.docked .drag-handle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.controls.docked .drag-handle svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+}
+
+/* Snap Preview (Ghost) */
+.snap-preview {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%) scale(0.9);
+    width: 56px;
+    height: 280px;
+    border-radius: 20px;
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+    opacity: 0;
+    /* On retire la transition d'opacity pour la gérer en JS (distance) */
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+    z-index: 900;
+    backdrop-filter: blur(4px);
+}
+
+.snap-preview.visible {
+    transform: translateY(-50%) scale(1);
+    /* Opacity gérée par JS */
+}
+
+.snap-preview.left {
+    left: 12px;
+}
+
+.snap-preview.right {
+    right: 12px;
+}
+
+/* Advanced Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.stat-item.small .stat-label {
+    font-size: 9px;
+}
+
+.stat-item.small .stat-value {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.chart-container {
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .control-group {
@@ -211,6 +375,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.95); }
+}
+
+.modal.closing {
+    animation: fadeOut 0.2s ease-in forwards;
 }
 
 .menu-item {
@@ -468,6 +641,147 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .pattern-actions {
     display: none;
 }
+/* Settings Modal Styles */
+.settings-modal {
+    max-width: 500px;
+    height: auto;
+    max-height: 80vh;
+}
+
+.settings-body {
+    padding: 30px 40px;
+    overflow-y: auto;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 20px 0;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-item:last-child {
+    border-bottom: none;
+}
+
+.setting-item label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.setting-control input[type="range"] {
+    width: 120px;
+}
+
+.setting-value {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    min-width: 60px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Toggle Switch */
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-slider {
+    background-color: var(--active-color);
+}
+
+.toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* Stats in settings */
+.stats-display {
+    display: flex;
+    gap: 30px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-item .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.stat-item .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: white;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Desktop only elements */
+.desktop-only {
+    display: flex;
+}
+
 @media (max-width: 768px) {
     .hint {
         display: none;
@@ -478,15 +792,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
         gap: 12px;
         width: 95vw;
         overflow-x: auto;
-        justify-content: space-between;
+        justify-content: center;
     }
 
     .separator {
         display: none;
     }
 
-    .info {
-        display: none; /* Hide stats on mobile to save space */
+    .desktop-only {
+        display: none !important;
     }
 
     /* Increase touch targets slightly */
@@ -494,7 +808,53 @@ input[type="range"]::-webkit-slider-thumb:hover {
         padding: 10px;
     }
 
-    .slider-container {
-        display: none; /* Hide speed slider on mobile to save space */
+    .settings-modal {
+        width: 95%;
+        margin: 10% auto;
     }
+
+    .settings-body {
+        padding: 20px;
+    }
+}
+
+/* Color Input */
+input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
 }

@@ -23,6 +23,9 @@
     
     <div id="ui-layer">
         <div class="controls">
+            <div class="drag-handle desktop-only" title="Drag to move">
+                <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </div>
             <div class="control-group">
                 <button id="playPauseBtn" title="Play/Pause (Space)">
                     <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
@@ -36,16 +39,27 @@
                     <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                 </button>
                 <button id="eraserBtn" title="Eraser (E)">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.14 3c-.51 0-1.02.2-1.41.59L2.59 14.73c-.78.78-.78 2.05 0 2.83L5.17 20.17c.79.79 2.05.79 2.83 0l11.14-11.14c.78-.78.78-2.05 0-2.83l-2.58-2.58C16.16 3.2 15.65 3 15.14 3zM5 19l-1.41-1.41L13.17 8 16 10.83 5 19z"/></svg>
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16.24 3.56l4.95 4.95a2 2 0 0 1 0 2.83L12 20.53a4 4 0 0 1-5.66 0L2.81 17a2 2 0 0 1 0-2.83L13.41 3.56a2 2 0 0 1 2.83 0zM4.22 15.58l3.54 3.53a2 2 0 0 0 2.83 0l8.49-8.48L14.12 5.7l-9.9 9.88zM2 22h20v1H2z"/></svg>
                 </button>
                 <button id="selectBtn" title="Select (S)">
-                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm8 0h-2v2h2V3zm2 8h2v-2h-2v2zm0-4h2V5h-2v2zm0 12h2c0 1.1-.9 2-2 2v-2zm0-4h2v-2h-2v2zm-4 4h-2v2h2v-2zm-4 0H9v2h2v-2zm-2 0H5v2h2v-2z"/></svg>
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M4,3H5V5H3V4A1,1 0 0,1 4,3M20,3A1,1 0 0,1 21,4V5H19V3H20M15,5V3H17V5H15M11,5V3H13V5H11M7,5V3H9V5H7M21,20A1,1 0 0,1 20,21H19V19H21V20M15,21V19H17V21H15M11,21V19H13V21H11M7,21V19H9V21H7M4,21A1,1 0 0,1 3,20V19H5V21H4M3,15H5V17H3V15M21,15V17H19V15H21M3,11H5V13H3V11M21,11V13H19V11H21M3,7H5V9H3V7M21,7V9H19V7H21Z"/></svg>
                 </button>
                 <button id="handBtn" title="Pan (H)">
                     <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M23 5.5V20c0 2.2-1.8 4-4 4h-7.3c-1.08 0-2.1-.43-2.85-1.19L1 14.83s1.26-1.23 1.3-1.25c.22-.19.49-.29.79-.29.22 0 .42.06.6.16.04.01 4.31 2.46 4.31 2.46V4c0-.83.67-1.5 1.5-1.5S11 3.17 11 4v7h1V1.5c0-.83.67-1.5 1.5-1.5S15 .67 15 1.5V11h1V2.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h1V5.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5z"/></svg>
                 </button>
             </div>
             
+            <div class="separator"></div>
+
+            <div class="control-group">
+                <button id="undoBtn" title="Undo (Ctrl+Z)">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+                </button>
+                <button id="redoBtn" title="Redo (Ctrl+Y)">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+                </button>
+            </div>
+
             <div class="separator"></div>
 
             <div class="control-group">
@@ -62,14 +76,22 @@
 
             <div class="separator"></div>
 
-            <div class="slider-container">
+            <div class="slider-container desktop-only">
                 <label for="speedRange">SPEED</label>
-                <input type="range" id="speedRange" min="1" max="60" value="30">
+                <input type="range" id="speedRange" min="1" max="120" value="30">
             </div>
 
             <div class="separator"></div>
 
-            <div class="info">
+            <div class="control-group">
+                <button id="settingsBtn" title="Settings">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                </button>
+            </div>
+
+            <div class="separator desktop-only"></div>
+
+            <div class="info desktop-only">
                 <div class="stat"><span class="label">POP</span> <span id="population" class="value">0</span></div>
                 <div class="stat"><span class="label">GEN</span> <span id="generation" class="value">0</span></div>
             </div>
@@ -92,6 +114,91 @@
         <div class="menu-item" id="ctx-cancel">Cancel</div>
     </div>
 
+    <!-- Modal Paramètres -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content settings-modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <span class="close-modal" id="closeSettingsModal">&times;</span>
+            </div>
+            <div class="modal-body settings-body">
+                <div class="settings-section">
+                    <h3>Simulation</h3>
+                    <div class="setting-item">
+                        <label for="speedRangeModal">Speed</label>
+                        <div class="setting-control">
+                            <input type="range" id="speedRangeModal" min="1" max="120" value="30">
+                            <span id="speedValueDisplay" class="setting-value">30 FPS</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Display</h3>
+                    <div class="setting-item">
+                        <label>Show Grid</label>
+                        <div class="setting-control">
+                            <label class="toggle">
+                                <input type="checkbox" id="showGridToggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="cellColorPicker">Live Cell Color</label>
+                        <div class="setting-control">
+                            <input type="color" id="cellColorPicker" value="#ffffff">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="bgColorPicker">Background Color</label>
+                        <div class="setting-control">
+                            <input type="color" id="bgColorPicker" value="#000000">
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="gridColorPicker">Grid Color</label>
+                        <div class="setting-control">
+                            <input type="color" id="gridColorPicker" value="#1a1a1a">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Statistics</h3>
+                    <div class="stats-display">
+                        <div class="stat-item">
+                            <span class="stat-label">Population</span>
+                            <span id="popModal" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Generation</span>
+                            <span id="genModal" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="advanced-stats" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="stats-grid">
+                            <div class="stat-item small">
+                                <span class="stat-label">Max Pop</span>
+                                <span id="maxPopDisplay" class="stat-value small">0</span>
+                            </div>
+                            <div class="stat-item small">
+                                <span class="stat-label">Births/Gen</span>
+                                <span id="birthsDisplay" class="stat-value small">0</span>
+                            </div>
+                            <div class="stat-item small">
+                                <span class="stat-label">Deaths/Gen</span>
+                                <span id="deathsDisplay" class="stat-value small">0</span>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="margin-top: 15px; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 10px;">
+                            <canvas id="statsChart" width="400" height="100" style="width: 100%; height: 100px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal pour les modèles -->
     <div id="patternModal" class="modal">
         <div class="modal-content">
@@ -111,14 +218,5 @@
     </div>
 
     <script src="script.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('Service Worker registered', reg))
-                    .catch(err => console.log('Service Worker registration failed', err));
-            });
-        }
-    </script>
 </body>
 </html>
