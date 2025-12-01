@@ -1022,7 +1022,19 @@ canvas.addEventListener('wheel', (e) => {
 
 // --- Unified Input Handling (Mouse & Touch) ---
 
-function onPointerDown(x, y, button) {
+function getPointerPos(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+function onPointerDown(clientX, clientY, button) {
+    const pos = getPointerPos(clientX, clientY);
+    const x = pos.x;
+    const y = pos.y;
+
     lastMouseX = x;
     lastMouseY = y;
     hasDragged = false;
@@ -1088,7 +1100,11 @@ function onPointerDown(x, y, button) {
     draw();
 }
 
-function onPointerMove(x, y, dx, dy) {
+function onPointerMove(clientX, clientY, dx, dy) {
+    const pos = getPointerPos(clientX, clientY);
+    const x = pos.x;
+    const y = pos.y;
+
     lastMouseX = x;
     lastMouseY = y;
 
@@ -1111,7 +1127,11 @@ function onPointerMove(x, y, dx, dy) {
     }
 }
 
-function onPointerUp(x, y, isCtrl) {
+function onPointerUp(clientX, clientY, isCtrl) {
+    const pos = getPointerPos(clientX, clientY);
+    const x = pos.x;
+    const y = pos.y;
+
     if (isDragging) {
         isDragging = false;
         canvas.style.cursor = currentTool === 'hand' ? 'grab' : (currentTool === 'select' ? 'default' : 'crosshair');
@@ -1205,8 +1225,9 @@ canvas.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
         const t = e.touches[0];
         // Init last positions for drag calc
-        lastMouseX = t.clientX;
-        lastMouseY = t.clientY;
+        const pos = getPointerPos(t.clientX, t.clientY);
+        lastMouseX = pos.x;
+        lastMouseY = pos.y;
         onPointerDown(t.clientX, t.clientY, 0);
     } else if (e.touches.length === 2) {
         // Si on était en train de dessiner avec le premier doigt, on annule
@@ -1230,8 +1251,9 @@ canvas.addEventListener('touchmove', (e) => {
 
     if (e.touches.length === 1 && !isPinching) {
         const t = e.touches[0];
-        const dx = t.clientX - lastMouseX;
-        const dy = t.clientY - lastMouseY;
+        const pos = getPointerPos(t.clientX, t.clientY);
+        const dx = pos.x - lastMouseX;
+        const dy = pos.y - lastMouseY;
         onPointerMove(t.clientX, t.clientY, dx, dy);
     } else if (e.touches.length === 2) {
         const t1 = e.touches[0];
@@ -1253,16 +1275,22 @@ canvas.addEventListener('touchmove', (e) => {
             const zoom = dist / lastPinchDist;
             
             // Calculer la position monde sous le centre du pincement (après le pan)
-            const worldX = (currentCenter.x - offsetX) / scale;
-            const worldY = (currentCenter.y - offsetY) / scale;
+            // Note: Pour le pinch, on utilise les coords client directes car le calcul de centre est relatif
+            // Mais idéalement on devrait aussi corriger par getPointerPos si le canvas est décalé.
+            // Pour l'instant on suppose que le canvas est plein écran ou que l'erreur est minime pour le zoom.
+            // Correction simple : utiliser getPointerPos pour le centre
+            const centerPos = getPointerPos(currentCenter.x, currentCenter.y);
+            
+            const worldX = (centerPos.x - offsetX) / scale;
+            const worldY = (centerPos.y - offsetY) / scale;
 
             // Appliquer le zoom
             scale *= zoom;
             scale = Math.max(0.05, Math.min(scale, 200));
 
             // Ajuster l'offset pour maintenir le point monde sous le centre
-            offsetX = currentCenter.x - worldX * scale;
-            offsetY = currentCenter.y - worldY * scale;
+            offsetX = centerPos.x - worldX * scale;
+            offsetY = centerPos.y - worldY * scale;
         }
 
         lastPinchDist = dist;
@@ -1277,7 +1305,14 @@ canvas.addEventListener('touchend', (e) => {
     // Touchend fires for the touch that was removed
     // We assume if 0 touches left, interaction ended
     if (e.touches.length === 0) {
-        onPointerUp(lastMouseX, lastMouseY, false);
+        // On utilise lastMouseX/Y qui sont déjà corrigés
+        // Mais onPointerUp attend des clientX/Y bruts pour recalculer getPointerPos
+        // C'est un peu redondant mais pour garder la signature cohérente :
+        // On va tricher et passer des valeurs qui donneront les bons x/y une fois corrigés
+        // Ou plus simplement, modifier onPointerUp pour utiliser lastMouseX/Y si pas d'arguments
+        // Pour l'instant, on passe les coordonnées écran approximatives (rect.left + lastMouseX)
+        const rect = canvas.getBoundingClientRect();
+        onPointerUp(lastMouseX + rect.left, lastMouseY + rect.top, false);
     }
     if (e.touches.length < 2) {
         lastPinchDist = -1;

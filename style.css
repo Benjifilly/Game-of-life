@@ -20,18 +20,24 @@ body, html {
     padding: 0;
     width: 100%;
     height: 100%;
+    height: 100dvh; /* Utilise la hauteur dynamique du viewport pour iOS */
     overflow: hidden;
     background-color: var(--bg-color);
     font-family: var(--font-family);
     color: var(--text-color);
     letter-spacing: 0.02em;
     overscroll-behavior: none; /* Empêche le rebond sur iOS */
+    position: fixed; /* Fixe le body pour éviter tout scroll élastique */
+    inset: 0;
 }
 
 canvas {
     display: block;
-    width: 100vw;
-    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     cursor: crosshair;
     touch-action: none;
 }
