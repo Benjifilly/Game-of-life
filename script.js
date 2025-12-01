@@ -1856,8 +1856,19 @@ function closeSettingsModalFn() {
 
 settingsBtn.addEventListener('click', openSettingsModal);
 closeSettingsModal.addEventListener('click', closeSettingsModalFn);
+closeSettingsModal.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    closeSettingsModalFn();
+});
+
 window.addEventListener('click', (e) => {
     if (e.target === settingsModal) closeSettingsModalFn();
+});
+window.addEventListener('touchend', (e) => {
+    if (e.target === settingsModal) {
+        e.preventDefault();
+        closeSettingsModalFn();
+    }
 });
 
 speedRangeModal.addEventListener('input', (e) => {
